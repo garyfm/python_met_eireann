@@ -1,18 +1,33 @@
 #!/usr/bin/python3
 
 import requests
-from bs4 import BeautifulSoup as bs4
-req = requests.get("https://www.met.ie/weather-forecast/cork-city#forecasts")
 
-print("Return code: ", req.status_code)
+# Colors
+RED = '\033[91m'
+GREEN = '\033[92m'
+ENDC = '\033[0m'
 
-if (req.status_code == 200):
-    met_soup = bs4(req.text, "lxml")
-    print ("Location: ", met_soup.title.string)
-    met_text = met_soup.get_text()
-    met_text = met_text.split(" ")
-    print (met_text)
+# Temp should be input to program
+CORK_LONG = 51.903614
+CORK_LAT = -8.468399 
 
-    cork = [x for x in met_text if x == "Temperature"]
-    print(cork)
-    
+lng = CORK_LONG 
+lat = CORK_LAT
+MET_API_URL = "http://metwdb-openaccess.ichec.ie/metno-wdb2ts/locationforecast?"
+
+def get_met_data(api_url):
+    req = requests.get(MET_API_URL + "lat=" + str(lng) + ";long=" + str(lat))
+
+    if (req.status_code == 200):
+        print(GREEN + "API Request Success: " + str(req.status_code) + ENDC)
+        return req.text
+    else:
+        print(RED + "API Request Fail: " + str(req.status_code) + ENDC)
+
+    return
+
+def main():
+   met_data = get_met_data(MET_API_URL) 
+
+if __name__ == "__main__":
+    main()
