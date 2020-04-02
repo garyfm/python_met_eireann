@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
 import requests
-import untangle
 import os.path
+import xmltodict
+import json
 
 # Colors
 RED = '\033[91m'
@@ -31,7 +32,7 @@ def get_data_api(api_url, file_path):
         return req.text
     else:
         print(RED + "API Request Fail: " + str(req.status_code) + ENDC)
-        return 
+        return None
 
 def get_met_data(api_url, file_path):
     # Check if data in file
@@ -51,8 +52,16 @@ def get_met_data(api_url, file_path):
     return xml_data
 
 def parse_met_data(xml_data):
-    met_data_xml = untangle.parse(xml_data)
-    print(met_data_xml.weatherdata.product['class'])
+    met_data_xml = xmltodict.parse(xml_data)
+   
+    # Loop over all data points
+    #for point_data in data_points:
+    # Loop over indvidual weather parameters 
+    i = 0
+    for data_point in met_data_xml['weatherdata']['product']['time']:
+        # print(data_point)
+        print(str(i) + ". from: " + data_point['@from'] + " to: " + data_point['@to']) 
+        i += 1
 
     return
 
@@ -60,7 +69,7 @@ def main():
     met_data_xml = get_met_data(MET_API_URL, MET_DATA_FILE)
     if (met_data_xml == ''):
         print(RED + "Failed to get Met Data" + ENDC)
-        return
+        return None
 
     parse_met_data(met_data_xml)
     return
