@@ -53,16 +53,34 @@ def get_met_data(api_url, file_path):
 
 def parse_met_data(xml_data):
     met_data_xml = xmltodict.parse(xml_data)
-   
+    temperature = []
+    humidity = []
+    rain = []
+    i, j, k = 0, 0, 0
     # Loop over all data points
     #for point_data in data_points:
     # Loop over indvidual weather parameters 
-    i = 0
     for data_point in met_data_xml['weatherdata']['product']['time']:
         # print(data_point)
-        print(str(i) + ". from: " + data_point['@from'] + " to: " + data_point['@to']) 
-        i += 1
 
+        print(str(i) + ". from: " + data_point['@from'] + " to: " + data_point['@to']) 
+
+        # Even  = temp and humid, Odd = Rain data points
+        if ((i % 2 ) == 0):
+            temperature.append(data_point['location']['temperature'])
+            print("\tTemperature: " + temperature[j]['@value'])
+            humidity.append(data_point['location']['humidity'])
+            print("\tHumidity: " + humidity[j]['@value'])
+            # Index for temp and humidity lists
+            j += 1
+        else:
+            rain.append(data_point['location']['precipitation'])
+            print("\tPericipitation: " + rain[k]['@value'])
+            # Index for rain list
+            k += 1
+
+        # Index over all data points 
+        i += 1
     return
 
 def main():
