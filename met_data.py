@@ -4,11 +4,11 @@ import requests
 import os.path
 import xmltodict
 import json
-import datetime as dt
+from datetime import datetime as dt
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import dates
-
+import matplotlib.dates as mdates
 # Colors
 RED = '\033[91m'
 GREEN = '\033[92m'
@@ -96,14 +96,18 @@ def plot_data(time, temp, humid, rain):
             time_series.append(time_point[0])
         i+=1
     for value in temp:
-        temp_series.append(value['@value'])
+        temp_series.append(float(value['@value']))
     
-    plt.plot_date(time_series,  temp_series)
-    #plt.xticks(np.arange(min(time_series), max(time_series)+1), 5)
-#    temp_int = np.arange(min(temp_series), max(temp_series)+1)
-    plt.xlabel("Time")
+    hours = [dt.strptime(time_hour, "%Y-%m-%dT%H:%M:%SZ") for time_hour in time_series]
+    plt.plot_date(hours,  temp_series, ls='-')
+    # Configure x-ticks
+    plt.xticks(hours) # Tickmark + label at every plotted point
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    # Set lables 
+    plt.xlabel("Time(hr)")
     plt.ylabel("Temperature(C)")
     plt.title("Cork Temperature")
+    plt.grid(True)
     plt.show()
 
     return
