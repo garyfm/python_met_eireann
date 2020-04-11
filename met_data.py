@@ -95,21 +95,24 @@ def parse_met_data(xml_data):
 
 def plot_data(time, temp, humid, rain):
     temp_series, humid_series, rain_series, time_series = [], [], [], []
-    i = 0
 
-    for time_point in time:
-        if ((i % 2) == 0):
+    # Get values into a list
+    for index, time_point in enumerate(time):
+        if ((index % 2) == 0):
             time_series.append(time_point[0])
-        i+=1
+
     for value in temp:
         temp_series.append(float(value['@value']))
+
     for value in humid:
         humid_series.append(float(value['@value']))
+        
     for value in rain:
         rain_series.append(float(value['@value']))
 
     hours = [dt.strptime(time_hour, "%Y-%m-%dT%H:%M:%SZ") for time_hour in time_series]
 
+    # Ploting
     fig, ax = plt.subplots(nrows = 3, ncols = 1) 
     ax[0].plot_date(hours,  temp_series, ls='-')
     ax[1].plot_date(hours,  humid_series, ls='-')
@@ -135,16 +138,34 @@ def plot_data(time, temp, humid, rain):
     plt.show()
 
     return
+def predict_rain(time, rain):
+    index = 0
+    rain_predict = []
+
+    for value in rain:
+        if(float(value['@value']) <= 0): # TODO: Change to >
+            # Only use odd indexs in time, TODO: fix this at source
+            if((index % 2) == 0):
+               index += 1 
+
+            rain_time = time[index][0]
+            print(GREEN + value['@value'] + "mm of rain predicted at: " + rain_time) 
+            index += 1 
+            rain_predict.append([value['@value'], rain_time])
+
+    return rain_predict
 
 def main():
-    time, temp, humid, rain = [], [], [], [] 
+    time, temp, humid, rain, predicted_rain = [], [], [], [], []
+    
     met_data_xml = get_met_data(MET_API_URL, MET_DATA_FILE)
     if (met_data_xml == ''):
         print(RED + "Failed to get Met Data" + ENDC)
         return None
 
     time, temp, humid, rain = parse_met_data(met_data_xml)
-    plot_data(time, temp, humid, rain)
+    predict_rain(time, rain)
+    send_email(predicted_rain)
     return
 
 if __name__ == "__main__":
