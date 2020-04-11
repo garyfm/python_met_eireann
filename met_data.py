@@ -94,7 +94,7 @@ def parse_met_data(xml_data):
     return time, temperature, humidity, rain
 
 def plot_data(time, temp, humid, rain):
-    temp_series, time_series = [], []
+    temp_series, humid_series, rain_series, time_series = [], [], [], []
     i = 0
 
     for time_point in time:
@@ -103,18 +103,35 @@ def plot_data(time, temp, humid, rain):
         i+=1
     for value in temp:
         temp_series.append(float(value['@value']))
-    
+    for value in humid:
+        humid_series.append(float(value['@value']))
+    for value in rain:
+        rain_series.append(float(value['@value']))
+
     hours = [dt.strptime(time_hour, "%Y-%m-%dT%H:%M:%SZ") for time_hour in time_series]
-    
-    plt.plot_date(hours,  temp_series, ls='-')
+
+    fig, ax = plt.subplots(nrows = 3, ncols = 1) 
+    ax[0].plot_date(hours,  temp_series, ls='-')
+    ax[1].plot_date(hours,  humid_series, ls='-')
+    ax[2].plot_date(hours,  rain_series, ls='-')
+
     # Configure x-ticks
     plt.xticks(hours) # Tickmark + label at every plotted point
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+
     # Set lables 
-    plt.xlabel("Time(hr)")
-    plt.ylabel("Temperature(C)")
-    plt.title("Cork Temperature")
-    plt.grid(True)
+    ax[0].set_xlabel("Time(hr)")
+    ax[0].set_ylabel("Temperature(C)")
+    ax[1].set_xlabel("Time(hr)")
+    ax[1].set_ylabel("Humidity(%)")
+    ax[2].set_xlabel("Time(hr)")
+    ax[2].set_ylabel("Rain(mm)")
+
+    ax[0].grid(True)
+    ax[1].grid(True)
+    ax[2].grid(True)
+
+    plt.suptitle("Cork Weather")
     plt.show()
 
     return
