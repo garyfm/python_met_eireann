@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
-import requests
 import os.path
+import time
+import requests
 import xmltodict
 import json
 from datetime import datetime as dt
@@ -17,6 +18,8 @@ ENDC = '\033[0m'
 # Temp should be input to program
 CORK_LAT = 51.903614
 CORK_LONG = -8.468399 
+# CONSTS
+SEC_24_HR = 86400
 
 lng = CORK_LONG 
 lat = CORK_LAT
@@ -53,6 +56,11 @@ def get_met_data(api_url, file_path):
         #File Does not exist, Request data from API
         xml_data = get_data_api(api_url, file_path)
 
+    # Local data is stale, Request data from API
+    if (os.path.getmtime(file_path) < (time.time() - SEC_24_HR)):
+            print(RED + "File Data Stale" + ENDC)
+            xml_data = get_data_api(api_url, file_path)
+
     return xml_data
 
 def parse_met_data(xml_data):
@@ -64,22 +72,20 @@ def parse_met_data(xml_data):
     # Index over all data points
     for data_point in met_data_xml['weatherdata']['product']['time']:
         # Get time points time[[from, to], [from, to], ...]
-        #time[0] = data_point['@from']
-        #time_point[1] = data_point['@to']
         time.append([data_point['@from'], data_point['@to']])
-        print(str(i) + ". from: " +  time[i][0] + " to: " + time[i][1]) 
+        #print(str(i) + ". from: " +  time[i][0] + " to: " + time[i][1]) 
 
         # Even  = temp and humid, Odd = Rain data points
         if ((i % 2 ) == 0):
             temperature.append(data_point['location']['temperature'])
-            print("\tTemperature: " + temperature[j]['@value'])
+            #print("\tTemperature: " + temperature[j]['@value'])
             humidity.append(data_point['location']['humidity'])
-            print("\tHumidity: " + humidity[j]['@value'])
+            #print("\tHumidity: " + humidity[j]['@value'])
             # Index for temp and humidity lists
             j += 1
         else:
             rain.append(data_point['location']['precipitation'])
-            print("\tPericipitation: " + rain[k]['@value'])
+            #print("\tPericipitation: " + rain[k]['@value'])
             # Index for rain list
             k += 1
 
@@ -99,6 +105,7 @@ def plot_data(time, temp, humid, rain):
         temp_series.append(float(value['@value']))
     
     hours = [dt.strptime(time_hour, "%Y-%m-%dT%H:%M:%SZ") for time_hour in time_series]
+    
     plt.plot_date(hours,  temp_series, ls='-')
     # Configure x-ticks
     plt.xticks(hours) # Tickmark + label at every plotted point
