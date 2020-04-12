@@ -161,7 +161,7 @@ def predict_rain(time, rain):
     rain_predict = []
 
     for value in rain:
-        if(float(value['@value']) <= 0): # TODO: Change to >
+        if(float(value['@value']) > 0): 
             # Only use odd indexs in time, TODO: fix this at source
             if((index % 2) == 0):
                index += 1 
