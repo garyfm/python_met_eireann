@@ -12,4 +12,4 @@ Parses the Met Eireann API to get weather for given location
 * **Gmail API** - [gmail api](https://developers.google.com/gmail/api/v1/reference/users/messages/send)
 
 ## Example Plots
-![alt text](https://github.com/https://github.com/garyfm/raw/master/python_met_eireann/example_plot.png "Cork Weather")
+![](https://github.com/garyfm/python_met_eireann/blob/master/example_plot.png)
