@@ -39,6 +39,7 @@ lng = CORK_LONG
 lat = CORK_LAT
 MET_API_URL = "http://metwdb-openaccess.ichec.ie/metno-wdb2ts/locationforecast"
 MET_DATA_FILE = "met_data.xml"
+MET_GRAPH_FILE = "met_graph.png"
 
 payload = {'lat':lat, 'long':lng}
 
@@ -134,7 +135,9 @@ def plot_data(time, temp, humid, rain):
 
     # Configure x-ticks
     plt.xticks(hours) # Tickmark + label at every plotted point
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    ax[0].xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    ax[1].xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    ax[2].xaxis.set_major_formatter(mdates.DateFormatter('%H'))
 
     # Set lables 
     ax[0].set_xlabel("Time(hr)")
@@ -149,7 +152,8 @@ def plot_data(time, temp, humid, rain):
     ax[2].grid(True)
 
     plt.suptitle("Cork Weather")
-    plt.show()
+    # plt.show()
+    plt.savefig(MET_GRAPH_FILE)
 
     return
 def predict_rain(time, rain):
@@ -197,32 +201,36 @@ def auth_gmail():
     return creds
  
 def send_email(data):
+    # Create Email
     sender = "gmojo.dev@gmail.com"
     revicever = "garyfmullen@gmail.com"
     subject = "[METPY] Cork Weather"
     body = str(data)
     
-    msg = MIMEMultipart('alternative')
+    msg = MIMEMultipart()
     msg['Subject'] = subject
-    msg['From'] = sender
+
     msg['To'] = revicever
     msg.attach(MIMEText(body, 'plain'))
-
+    # Attach Image
+    image = open(MET_GRAPH_FILE, 'rb').read()
+    msg.attach(MIMEImage(image, name=MET_GRAPH_FILE))
     raw = base64.urlsafe_b64encode(msg.as_bytes())
     raw = raw.decode()
     email_msg = {'raw': raw}
 
+        # Auth Gmail
     creds =  auth_gmail()
+
     if(creds == ''):
         print(RED + "Failed to Get Gmail Creds" + ENDC)
-        return
+        return False
 
-    #http = creds.authorize(httplib2.Http()) 
+    # Send Email
     service = build('gmail', 'v1', credentials = creds) 
-    #aresults = service.users().labels().list(userId='me').execute()
     results = service.users().messages().send(userId='me', body=email_msg).execute()
     print(results) 
-    return
+    return results
 
 def main():
     time, temp, humid, rain, predicted_rain = [], [], [], [], []
@@ -233,8 +241,14 @@ def main():
         return None
 
     time, temp, humid, rain = parse_met_data(met_data_xml)
+    plot_data(time, temp, humid, rain)
     predicted_rain = predict_rain(time, rain)
-    send_email(predicted_rain)
+    result = send_email(predicted_rain)
+    if (result['labelIds'] != ['SENT']):
+        print(RED + "*** Failed to send email ***" + ENDC)
+    else:
+        print(GREEN + "*** Email send successful ***" + ENDC)
+
     return
 
 if __name__ == "__main__":
