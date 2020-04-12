@@ -10,6 +10,20 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import dates
 import matplotlib.dates as mdates
+import smtplib
+from email.mime.text import MIMEText
+import base64
+from email.mime.multipart import MIMEMultipart
+import mimetypes
+from email.mime.image import MIMEImage
+
+#gmail imports
+import pickle
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from apiclient import errors, discovery
+
 # Colors
 RED = '\033[91m'
 GREEN = '\033[92m'
@@ -154,6 +168,61 @@ def predict_rain(time, rain):
             rain_predict.append([value['@value'], rain_time])
 
     return rain_predict
+
+def auth_gmail():
+    #ripped from https://developers.google.com/gmail/api/quickstart/python?authuser=2
+
+    # If modifying these scopes, delete the file token.pickle.
+    SCOPES = 'https://mail.google.com/'
+
+    creds = None
+    # The file token.pickle stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            creds = pickle.load(token)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.pickle', 'wb') as token:
+            pickle.dump(creds, token)
+
+    return creds
+ 
+def send_email(data):
+    sender = "gmojo.dev@gmail.com"
+    revicever = "garyfmullen@gmail.com"
+    subject = "[METPY] Cork Weather"
+    body = str(data)
+    
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = sender
+    msg['To'] = revicever
+    msg.attach(MIMEText(body, 'plain'))
+
+    raw = base64.urlsafe_b64encode(msg.as_bytes())
+    raw = raw.decode()
+    email_msg = {'raw': raw}
+
+    creds =  auth_gmail()
+    if(creds == ''):
+        print(RED + "Failed to Get Gmail Creds" + ENDC)
+        return
+
+    #http = creds.authorize(httplib2.Http()) 
+    service = build('gmail', 'v1', credentials = creds) 
+    #aresults = service.users().labels().list(userId='me').execute()
+    results = service.users().messages().send(userId='me', body=email_msg).execute()
+    print(results) 
+    return
 
 def main():
     time, temp, humid, rain, predicted_rain = [], [], [], [], []
