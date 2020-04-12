@@ -10,6 +10,20 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import dates
 import matplotlib.dates as mdates
+import smtplib
+from email.mime.text import MIMEText
+import base64
+from email.mime.multipart import MIMEMultipart
+import mimetypes
+from email.mime.image import MIMEImage
+
+#gmail imports
+import pickle
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from apiclient import errors, discovery
+
 # Colors
 RED = '\033[91m'
 GREEN = '\033[92m'
@@ -25,6 +39,7 @@ lng = CORK_LONG
 lat = CORK_LAT
 MET_API_URL = "http://metwdb-openaccess.ichec.ie/metno-wdb2ts/locationforecast"
 MET_DATA_FILE = "met_data.xml"
+MET_GRAPH_FILE = "met_graph.png"
 
 payload = {'lat':lat, 'long':lng}
 
@@ -120,7 +135,9 @@ def plot_data(time, temp, humid, rain):
 
     # Configure x-ticks
     plt.xticks(hours) # Tickmark + label at every plotted point
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    ax[0].xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    ax[1].xaxis.set_major_formatter(mdates.DateFormatter('%H'))
+    ax[2].xaxis.set_major_formatter(mdates.DateFormatter('%H'))
 
     # Set lables 
     ax[0].set_xlabel("Time(hr)")
@@ -135,7 +152,8 @@ def plot_data(time, temp, humid, rain):
     ax[2].grid(True)
 
     plt.suptitle("Cork Weather")
-    plt.show()
+    # plt.show()
+    plt.savefig(MET_GRAPH_FILE)
 
     return
 def predict_rain(time, rain):
@@ -143,7 +161,7 @@ def predict_rain(time, rain):
     rain_predict = []
 
     for value in rain:
-        if(float(value['@value']) <= 0): # TODO: Change to >
+        if(float(value['@value']) > 0): 
             # Only use odd indexs in time, TODO: fix this at source
             if((index % 2) == 0):
                index += 1 
@@ -155,6 +173,65 @@ def predict_rain(time, rain):
 
     return rain_predict
 
+def auth_gmail():
+    #ripped from https://developers.google.com/gmail/api/quickstart/python?authuser=2
+
+    # If modifying these scopes, delete the file token.pickle.
+    SCOPES = 'https://mail.google.com/'
+
+    creds = None
+    # The file token.pickle stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            creds = pickle.load(token)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.pickle', 'wb') as token:
+            pickle.dump(creds, token)
+
+    return creds
+ 
+def send_email(data):
+    # Create Email
+    sender = "gmojo.dev@gmail.com"
+    revicever = "garyfmullen@gmail.com"
+    subject = "[METPY] Cork Weather"
+    body = str(data)
+    
+    msg = MIMEMultipart()
+    msg['Subject'] = subject
+
+    msg['To'] = revicever
+    msg.attach(MIMEText(body, 'plain'))
+    # Attach Image
+    image = open(MET_GRAPH_FILE, 'rb').read()
+    msg.attach(MIMEImage(image, name=MET_GRAPH_FILE))
+    raw = base64.urlsafe_b64encode(msg.as_bytes())
+    raw = raw.decode()
+    email_msg = {'raw': raw}
+
+        # Auth Gmail
+    creds =  auth_gmail()
+
+    if(creds == ''):
+        print(RED + "Failed to Get Gmail Creds" + ENDC)
+        return False
+
+    # Send Email
+    service = build('gmail', 'v1', credentials = creds) 
+    results = service.users().messages().send(userId='me', body=email_msg).execute()
+    print(results) 
+    return results
+
 def main():
     time, temp, humid, rain, predicted_rain = [], [], [], [], []
     
@@ -164,8 +241,14 @@ def main():
         return None
 
     time, temp, humid, rain = parse_met_data(met_data_xml)
-    predict_rain(time, rain)
-    send_email(predicted_rain)
+    plot_data(time, temp, humid, rain)
+    predicted_rain = predict_rain(time, rain)
+    result = send_email(predicted_rain)
+    if (result['labelIds'] != ['SENT']):
+        print(RED + "*** Failed to send email ***" + ENDC)
+    else:
+        print(GREEN + "*** Email send successful ***" + ENDC)
+
     return
 
 if __name__ == "__main__":
