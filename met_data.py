@@ -233,7 +233,7 @@ def main():
         return None
 
     time, temp, humid, rain = parse_met_data(met_data_xml)
-    predict_rain(time, rain)
+    predicted_rain = predict_rain(time, rain)
     send_email(predicted_rain)
     return
 
