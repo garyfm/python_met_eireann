@@ -1,4 +1,6 @@
 *.xml
 *.odt
 .vscode/
+credentials.json
+token.pickle
 
